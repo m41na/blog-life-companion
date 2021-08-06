@@ -1,0 +1,24 @@
+{
+  "name": "js-as-java",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "main": "index.js",
+  "scripts": {
+    "start:server": "%GRAALVM_HOME%\\bin\\node.cmd index",
+    "test": "%GRAALVM_HOME%\\bin\\node.cmd .\\node_modules\\jest\\bin\\jest.js",
+    "jest": "jest"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "pkce-challenge": "^2.2.0",
+    "randomstring": "^1.2.1"
+  },
+  "devDependencies": {
+    "jest": "^27.0.6"
+  }
+}
