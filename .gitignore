@@ -35,3 +35,10 @@ build
 **/.env
 **/.local
 
+# Binaries for programs and plugins
+v-todo-app/main
+v-todo-app*.exe
+v-todo-app*.exe~
+v-todo-app*.so
+v-todo-app*.dylib
+v-todo-app*.dll

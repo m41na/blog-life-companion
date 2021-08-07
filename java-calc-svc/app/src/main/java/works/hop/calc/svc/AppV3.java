@@ -33,8 +33,8 @@ public class AppV3 {
         Bindings bindings = eng.getBindings(ScriptContext.ENGINE_SCOPE);
         bindings.put("polyglot.js.allowHostAccess", true);
         bindings.put("polyglot.js.allowHostClassLookup", (Predicate<String>) s -> true);
-        bindings.put("appV3", AppV3.class);
-        Object fn = eng.eval(new InputStreamReader(Objects.requireNonNull(AppV3.class.getResourceAsStream("/server.js"))));
+        bindings.put("AppV3", AppV3.class);
+        Object fn = eng.eval(new InputStreamReader(Objects.requireNonNull(AppV3.class.getResourceAsStream("/server-v3.js"))));
         Invocable inv = (Invocable) eng;
         Object result = inv.invokeMethod(fn, "call", fn);
         System.out.println(result);

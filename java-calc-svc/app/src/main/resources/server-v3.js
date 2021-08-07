@@ -1,11 +1,10 @@
-let AppV4 = Java.type("works.hop.calc.svc.AppV4")
-let app = new AppV4()
+let app = new AppV3()
 //initialize app
 app.initServer();
 app.initContextHandler();
 
 //add handler
-app.handle("/", function (req, resp)  {
+app.addHandler("/", function (req, resp)  {
     resp.setStatus(200);
     let out;
     try {
