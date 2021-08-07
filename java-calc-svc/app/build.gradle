@@ -31,11 +31,8 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-task customFatJar(type: Jar) {
-    manifest {
-        attributes 'Main-Class': 'works.hop.calc.svc.AppV2'
+jar {
+    from {
+        configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
-    baseName = 'all-in-one-jar'
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
 }
