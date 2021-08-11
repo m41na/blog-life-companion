@@ -1,7 +1,6 @@
-package works.hop.jdbc.s_2_select_embedded;
+package works.hop.jdbc.s_3_select_composite_pk;
 
 import works.hop.jdbc.s_0_select.SelectResult;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,15 +8,15 @@ import java.util.Optional;
 
 public class Select {
 
-    private static final String connectionString = "jdbc:h2:./data/sample-2.db";
+    private static final String connectionString = "jdbc:h2:./data/sample-3.db";
 
     public static void main(String[] args) {
-        SelectResult<Customer> customers = select("select * from tbl_customer", new Object[]{}, EntityRegistry.registry.get(Customer.class));
-        if(customers.error != null){
-            System.out.println(customers.error);
+        SelectResult<User> users = select("select * from tbl_user", new Object[]{}, EntityRegistry.registry.get(User.class));
+        if(users.error != null){
+            System.out.println(users.error);
         }
         else {
-            for (Customer entity : customers.result) {
+            for (User entity : users.result) {
                 System.out.println(entity);
             }
         }
@@ -78,6 +77,14 @@ public class Select {
                 Object embeddedValue = extractEntity(rs, meta, embeddedEntityMetadata);
                 data.set(attributeName, embeddedValue);
             }
+        }
+        //check for CompositePk columns
+        if(metadata.containsCompositePk()){
+            ColumnInfo compositePkColumnInfo = metadata.compositePkColumn(); //can only have one
+            String attributeName = compositePkColumnInfo.attributeName;
+            EntityMetadata compositePkEntityMetadata = EntityRegistry.registry.get(compositePkColumnInfo.attributeType);
+            Object embeddedValue = extractEntity(rs, meta, compositePkEntityMetadata);
+            data.set(attributeName, embeddedValue);
         }
 
         return data;

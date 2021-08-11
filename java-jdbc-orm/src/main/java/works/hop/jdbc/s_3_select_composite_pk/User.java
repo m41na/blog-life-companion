@@ -1,39 +1,34 @@
-package works.hop.jdbc.s_2_select_embedded;
+package works.hop.jdbc.s_3_select_composite_pk;
 
 import java.time.LocalDate;
-import java.util.UUID;
 import java.util.logging.Logger;
 
-public class Customer implements Entity {
+public class User implements Entity {
 
-    static Logger LOG = Logger.getLogger(Customer.class.getName());
+    static Logger LOG = Logger.getLogger(User.class.getName());
 
-    UUID id;
-    String firstName;
-    String lastName;
-    Level level;
+    UserId userId;
+    String nickName;
+    AccessLevel accessLevel;
     Address address;
     LocalDate dateJoined;
 
     @Override
     public EntityMetadata metadata() {
-        return EntityRegistry.registry.get(Customer.class);
+        return EntityRegistry.registry.get(User.class);
     }
 
     @Override
     public <T> void set(String attribute, T value) {
         switch (attribute) {
-            case "id":
-                this.id = (UUID) value;
+            case "userId":
+                this.userId = (UserId) value;
                 break;
-            case "firstName":
-                this.firstName = (String) value;
+            case "nickName":
+                this.nickName = (String) value;
                 break;
-            case "lastName":
-                this.lastName = (String) value;
-                break;
-            case "level":
-                this.level = Level.valueOf((String)value);
+            case "accessLevel":
+                this.accessLevel = AccessLevel.valueOf((String)value);
                 break;
             case "address":
                 this.address = (Address) value;

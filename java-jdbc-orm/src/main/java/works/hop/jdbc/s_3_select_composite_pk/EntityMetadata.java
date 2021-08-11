@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_2_select_embedded;
+package works.hop.jdbc.s_3_select_composite_pk;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,5 +36,13 @@ public abstract class EntityMetadata {
 
     public List<ColumnInfo> embeddedColumns(){
         return columns.stream().filter(info -> info.isEmbedded).collect(Collectors.toList());
+    }
+
+    public boolean containsCompositePk(){
+        return columns.stream().anyMatch(info -> info.isCompositePk);
+    }
+
+    public ColumnInfo compositePkColumn(){
+        return columns.stream().filter(info -> info.isCompositePk).findFirst().orElseThrow();
     }
 }
