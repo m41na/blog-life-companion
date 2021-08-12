@@ -7,11 +7,11 @@ import java.sql.Statement;
 
 public class SetupTable {
 
-    private static final String connectionString = "jdbc:h2:./data/sample-2.db";
+    private static final String connectionString = "jdbc:h2:./data/sample-4.db";
 
     public static void createTable() {
         String[] queries = new String[]{
-                "delete table if exists tbl_task;",
+                "drop table if exists tbl_task;",
                 "create table if not exists tbl_task (\n" +
                 "  id UUID default random_uuid(),\n" +
                 "  name varchar(50) not null,\n" +
@@ -44,8 +44,7 @@ public class SetupTable {
     }
 
     public static void main(String[] args) {
-//        connect();
-//        createTaskTable();
+        createTable();
         initializeData("Wake up");
         initializeData("Shower");
         initializeData("Eat Breakfast");
