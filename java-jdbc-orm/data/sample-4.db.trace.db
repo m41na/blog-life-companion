@@ -50,3 +50,99 @@ java.sql.SQLClientInfoException: Client info name 'ApplicationName' not supporte
 	at org.jkiss.dbeaver.runtime.jobs.ConnectJob.run(ConnectJob.java:70)
 	at org.jkiss.dbeaver.model.runtime.AbstractJob.run(AbstractJob.java:105)
 	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:63)
+2021-08-11 22:30:46 jdbc[3]: exception
+java.sql.SQLClientInfoException: Client info name 'ApplicationName' not supported.
+	at org.h2.jdbc.JdbcConnection.setClientInfo(JdbcConnection.java:1749)
+	at org.jkiss.dbeaver.ext.generic.model.GenericDataSource.populateClientAppName(GenericDataSource.java:175)
+	at org.jkiss.dbeaver.ext.generic.model.GenericDataSource.openConnection(GenericDataSource.java:138)
+	at org.jkiss.dbeaver.ext.h2.model.H2DataSource.openConnection(H2DataSource.java:74)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCExecutionContext.connect(JDBCExecutionContext.java:103)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCRemoteInstance.initializeMainContext(JDBCRemoteInstance.java:100)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCRemoteInstance.<init>(JDBCRemoteInstance.java:59)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCDataSource.initializeRemoteInstance(JDBCDataSource.java:109)
+	at org.jkiss.dbeaver.ext.generic.model.GenericDataSource.<init>(GenericDataSource.java:107)
+	at org.jkiss.dbeaver.ext.h2.model.H2DataSource.<init>(H2DataSource.java:43)
+	at org.jkiss.dbeaver.ext.h2.model.H2MetaModel.createDataSourceImpl(H2MetaModel.java:47)
+	at org.jkiss.dbeaver.ext.generic.GenericDataSourceProvider.openDataSource(GenericDataSourceProvider.java:106)
+	at org.jkiss.dbeaver.registry.DataSourceDescriptor.connect(DataSourceDescriptor.java:919)
+	at org.jkiss.dbeaver.runtime.jobs.ConnectJob.run(ConnectJob.java:70)
+	at org.jkiss.dbeaver.model.runtime.AbstractJob.run(AbstractJob.java:105)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:63)
+2021-08-11 22:32:03 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM TBL_TASK TT 
+
+UPDATE[*] TBL_TASK SET PARENT_TASK = '28279a37-42ae-4eee-a2f5-e34785d9febb' WHERE ID = 'd4488055-dd8e-4846-ac0b-20715fd948c0'"; SQL statement:
+SELECT * FROM TBL_TASK tt 
+
+UPDATE TBL_TASK SET PARENT_TASK = '28279a37-42ae-4eee-a2f5-e34785d9febb' WHERE ID = 'd4488055-dd8e-4846-ac0b-20715fd948c0' [42000-200]
+2021-08-11 22:36:04 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT PK_TABLE.* FROM NULL[*] PK_TABLE INNER JOIN NULL FK_TABLE ON PK_TABLE.PARENT_TASK = PK_TABLE.ID WHERE FK_TABLE.PARENT_TASK = ?"; expected "identifier"; SQL statement:
+select PK_TABLE.* from null PK_TABLE inner join null FK_TABLE on PK_TABLE.parent_task = PK_TABLE.id where FK_TABLE.parent_task = ? [42001-200]
+2021-08-11 22:38:32 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT PK_TABLE.* FROM NULL[*] PK_TABLE INNER JOIN NULL FK_TABLE ON PK_TABLE.PARENT_TASK = PK_TABLE.ID WHERE FK_TABLE.PARENT_TASK = ?"; expected "identifier"; SQL statement:
+select PK_TABLE.* from null PK_TABLE inner join null FK_TABLE on PK_TABLE.parent_task = PK_TABLE.id where FK_TABLE.parent_task = ? [42001-200]
+2021-08-11 22:39:38 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT PK_TABLE.* FROM NULL[*] PK_TABLE INNER JOIN NULL FK_TABLE ON PK_TABLE.PARENT_TASK = PK_TABLE.ID WHERE FK_TABLE.PARENT_TASK = ?"; expected "identifier"; SQL statement:
+select PK_TABLE.* from null PK_TABLE inner join null FK_TABLE on PK_TABLE.parent_task = PK_TABLE.id where FK_TABLE.parent_task = ? [42001-200]
+2021-08-11 22:39:49 jdbc[3]: exception
+java.sql.SQLClientInfoException: Client info name 'ApplicationName' not supported.
+	at org.h2.jdbc.JdbcConnection.setClientInfo(JdbcConnection.java:1749)
+	at org.jkiss.dbeaver.ext.generic.model.GenericDataSource.populateClientAppName(GenericDataSource.java:175)
+	at org.jkiss.dbeaver.ext.generic.model.GenericDataSource.openConnection(GenericDataSource.java:138)
+	at org.jkiss.dbeaver.ext.h2.model.H2DataSource.openConnection(H2DataSource.java:74)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCExecutionContext.connect(JDBCExecutionContext.java:103)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCRemoteInstance.initializeMainContext(JDBCRemoteInstance.java:100)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCRemoteInstance.<init>(JDBCRemoteInstance.java:59)
+	at org.jkiss.dbeaver.model.impl.jdbc.JDBCDataSource.initializeRemoteInstance(JDBCDataSource.java:109)
+	at org.jkiss.dbeaver.ext.generic.model.GenericDataSource.<init>(GenericDataSource.java:107)
+	at org.jkiss.dbeaver.ext.h2.model.H2DataSource.<init>(H2DataSource.java:43)
+	at org.jkiss.dbeaver.ext.h2.model.H2MetaModel.createDataSourceImpl(H2MetaModel.java:47)
+	at org.jkiss.dbeaver.ext.generic.GenericDataSourceProvider.openDataSource(GenericDataSourceProvider.java:106)
+	at org.jkiss.dbeaver.registry.DataSourceDescriptor.connect(DataSourceDescriptor.java:919)
+	at org.jkiss.dbeaver.runtime.jobs.ConnectJob.run(ConnectJob.java:70)
+	at org.jkiss.dbeaver.model.runtime.AbstractJob.run(AbstractJob.java:105)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:63)
+2021-08-11 22:40:19 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT PK_TABLE.* FROM NULL[*] PK_TABLE 
+INNER JOIN NULL FK_TABLE ON PK_TABLE.PARENT_TASK = PK_TABLE.ID 
+WHERE FK_TABLE.PARENT_TASK = '43b436e8-641b-4551-8f28-d147c9a96a6b'"; expected "identifier"; SQL statement:
+select PK_TABLE.* from null PK_TABLE 
+inner join null FK_TABLE on PK_TABLE.parent_task = PK_TABLE.id 
+where FK_TABLE.parent_task = '43b436e8-641b-4551-8f28-d147c9a96a6b' [42001-200]
+2021-08-11 22:45:21 database: flush
+org.h2.message.DbException: General error: "java.lang.IllegalStateException: The file is locked: nio:C:/Projects/Javascript/blog-life-companion/java-jdbc-orm/data/sample-4.db.mv.db [1.4.200/7]" [50000-200]
+	at org.h2.message.DbException.get(DbException.java:194)
+	at org.h2.message.DbException.convert(DbException.java:347)
+	at org.h2.mvstore.db.MVTableEngine$1.uncaughtException(MVTableEngine.java:93)
+	at org.h2.mvstore.MVStore.handleException(MVStore.java:2877)
+	at org.h2.mvstore.MVStore.panic(MVStore.java:481)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:402)
+	at org.h2.mvstore.MVStore$Builder.open(MVStore.java:3579)
+	at org.h2.mvstore.db.MVTableEngine$Store.open(MVTableEngine.java:170)
+	at org.h2.mvstore.db.MVTableEngine.init(MVTableEngine.java:103)
+	at org.h2.engine.Database.getPageStore(Database.java:2659)
+	at org.h2.engine.Database.open(Database.java:675)
+	at org.h2.engine.Database.openDatabase(Database.java:307)
+	at org.h2.engine.Database.<init>(Database.java:301)
+	at org.h2.engine.Engine.openSession(Engine.java:74)
+	at org.h2.engine.Engine.openSession(Engine.java:192)
+	at org.h2.engine.Engine.createSessionAndValidate(Engine.java:171)
+	at org.h2.engine.Engine.createSession(Engine.java:166)
+	at org.h2.engine.Engine.createSession(Engine.java:29)
+	at org.h2.engine.SessionRemote.connectEmbeddedOrServer(SessionRemote.java:340)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:173)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:152)
+	at org.h2.Driver.connect(Driver.java:69)
+	at java.sql/java.sql.DriverManager.getConnection(DriverManager.java:677)
+	at java.sql/java.sql.DriverManager.getConnection(DriverManager.java:251)
+	at works.hop.jdbc.s_4_select_1_to_1.Select.select(Select.java:26)
+	at works.hop.jdbc.s_4_select_1_to_1.Select.main(Select.java:15)
+Caused by: org.h2.jdbc.JdbcSQLNonTransientException: General error: "java.lang.IllegalStateException: The file is locked: nio:C:/Projects/Javascript/blog-life-companion/java-jdbc-orm/data/sample-4.db.mv.db [1.4.200/7]" [50000-200]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:505)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:429)
+	... 26 more
+Caused by: java.lang.IllegalStateException: The file is locked: nio:C:/Projects/Javascript/blog-life-companion/java-jdbc-orm/data/sample-4.db.mv.db [1.4.200/7]
+	at org.h2.mvstore.DataUtils.newIllegalStateException(DataUtils.java:950)
+	at org.h2.mvstore.FileStore.open(FileStore.java:172)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:381)
+	... 20 more

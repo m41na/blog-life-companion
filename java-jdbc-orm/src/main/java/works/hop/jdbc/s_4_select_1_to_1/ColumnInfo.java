@@ -8,20 +8,22 @@ public class ColumnInfo {
     Boolean isEmbedded;
     Boolean isEnum;
     Boolean isCompositePk;
+    Boolean isPkColumn;
     Boolean isFkColumn;
 
-    public ColumnInfo(String columnName, String attributeName, Class<?> attributeType, Boolean isEmbedded, Boolean isEnum,
-                      Boolean isCompositePk, Boolean isFkColumn) {
+    public ColumnInfo(String columnName, String attributeName, Class<?> attributeType, Boolean isEmbedded,
+                      Boolean isEnum, Boolean isCompositePk, Boolean isPkColumn, Boolean isFkColumn) {
         this.columnName = columnName;
         this.attributeName = attributeName;
         this.attributeType = attributeType;
         this.isEmbedded = isEmbedded;
         this.isEnum = isEnum;
         this.isCompositePk = isCompositePk;
+        this.isPkColumn = isPkColumn;
         this.isFkColumn = isFkColumn;
     }
 
-    public static ColumnInfoBuilder builder(){
+    public static ColumnInfoBuilder builder() {
         return new ColumnInfoBuilder();
     }
 }

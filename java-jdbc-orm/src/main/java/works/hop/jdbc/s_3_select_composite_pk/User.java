@@ -28,7 +28,7 @@ public class User implements Entity {
                 this.nickName = (String) value;
                 break;
             case "accessLevel":
-                this.accessLevel = AccessLevel.valueOf((String)value);
+                this.accessLevel = AccessLevel.valueOf((String) value);
                 break;
             case "address":
                 this.address = (Address) value;

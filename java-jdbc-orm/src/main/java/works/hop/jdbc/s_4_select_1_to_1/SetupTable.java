@@ -13,19 +13,19 @@ public class SetupTable {
         String[] queries = new String[]{
                 "drop table if exists tbl_task;",
                 "create table if not exists tbl_task (\n" +
-                "  id UUID default random_uuid(),\n" +
-                "  name varchar(50) not null,\n" +
-                "  done boolean not null default false,\n" +
-                "  task_created timestamp not null default now(),\n" +
-                "  parent_task UUID,\n" +
-                "  constraint task_pk primary key(id),\n" +
-                "  constraint uniq_name unique (name),\n" +
-                "  constraint task_parent_fk foreign key(parent_task) references tbl_task(id)\n" +
-                ");"
+                        "  id UUID default random_uuid(),\n" +
+                        "  name varchar(50) not null,\n" +
+                        "  done boolean not null default false,\n" +
+                        "  task_created timestamp not null default now(),\n" +
+                        "  parent_task UUID,\n" +
+                        "  constraint task_pk primary key(id),\n" +
+                        "  constraint uniq_name unique (name),\n" +
+                        "  constraint task_parent_fk foreign key(parent_task) references tbl_task(id)\n" +
+                        ");"
         };
         try (Connection conn = DriverManager.getConnection(connectionString);
              Statement stmt = conn.createStatement()) {
-            for(String sql : queries) {
+            for (String sql : queries) {
                 stmt.execute(sql);
             }
         } catch (SQLException e) {

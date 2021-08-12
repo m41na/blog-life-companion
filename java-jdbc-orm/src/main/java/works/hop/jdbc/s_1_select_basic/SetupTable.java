@@ -27,7 +27,7 @@ public class SetupTable {
     }
 
     public static void initializeData(String name) {
-        String sql = "insert into tbl_task (name) values ('" + name + "')" ;
+        String sql = "insert into tbl_task (name) values ('" + name + "')";
         try (Connection conn = DriverManager.getConnection(connectionString);
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql);

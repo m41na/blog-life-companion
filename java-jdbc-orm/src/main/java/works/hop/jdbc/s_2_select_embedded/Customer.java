@@ -33,7 +33,7 @@ public class Customer implements Entity {
                 this.lastName = (String) value;
                 break;
             case "level":
-                this.level = Level.valueOf((String)value);
+                this.level = Level.valueOf((String) value);
                 break;
             case "address":
                 this.address = (Address) value;

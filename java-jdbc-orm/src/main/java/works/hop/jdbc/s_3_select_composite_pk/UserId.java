@@ -2,7 +2,7 @@ package works.hop.jdbc.s_3_select_composite_pk;
 
 import java.util.logging.Logger;
 
-public class UserId implements Entity{
+public class UserId implements Entity {
 
     static Logger LOG = Logger.getLogger(User.class.getName());
 

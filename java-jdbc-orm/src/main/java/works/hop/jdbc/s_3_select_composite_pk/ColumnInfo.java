@@ -18,7 +18,7 @@ public class ColumnInfo {
         this.isCompositePk = isCompositePk;
     }
 
-    public static ColumnInfoBuilder builder(){
+    public static ColumnInfoBuilder builder() {
         return new ColumnInfoBuilder();
     }
 }

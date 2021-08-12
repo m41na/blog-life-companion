@@ -16,7 +16,7 @@ public class ColumnInfo {
         this.isEnum = isEnum;
     }
 
-    public static ColumnInfoBuilder builder(){
+    public static ColumnInfoBuilder builder() {
         return new ColumnInfoBuilder();
     }
 }

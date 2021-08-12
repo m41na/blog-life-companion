@@ -26,7 +26,7 @@ public class SetupTable {
         };
         try (Connection conn = DriverManager.getConnection(connectionString);
              Statement stmt = conn.createStatement()) {
-            for(String sql : queries) {
+            for (String sql : queries) {
                 stmt.execute(sql);
             }
         } catch (SQLException e) {
@@ -36,7 +36,7 @@ public class SetupTable {
 
     public static void initializeData(String firstName, String lastNAme, String city, String state, String zipCode) {
         String sql = "insert into tbl_customer (first_name, last_name, addr_city, addr_state, addr_postal_code) values " +
-                "('" + firstName +"', '" + lastNAme + "', '" + city + "', '" + state + "', '" + zipCode + "')";
+                "('" + firstName + "', '" + lastNAme + "', '" + city + "', '" + state + "', '" + zipCode + "')";
         try (Connection conn = DriverManager.getConnection(connectionString);
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql);

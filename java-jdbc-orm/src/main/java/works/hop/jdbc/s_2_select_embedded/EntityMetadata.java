@@ -23,18 +23,18 @@ public abstract class EntityMetadata {
 
     public abstract <T extends Entity> T entityInstance();
 
-    public Optional<ColumnInfo> resolveByColumnName(String columnName){
+    public Optional<ColumnInfo> resolveByColumnName(String columnName) {
         return columns.stream()
                 .filter(info -> info.columnName != null)
                 .filter(info -> info.columnName.equals(columnName))
                 .findFirst();
     }
 
-    public boolean containsEmbedded(){
+    public boolean containsEmbedded() {
         return columns.stream().anyMatch(info -> info.isEmbedded);
     }
 
-    public List<ColumnInfo> embeddedColumns(){
+    public List<ColumnInfo> embeddedColumns() {
         return columns.stream().filter(info -> info.isEmbedded).collect(Collectors.toList());
     }
 }

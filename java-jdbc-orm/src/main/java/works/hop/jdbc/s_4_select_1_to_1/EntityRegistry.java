@@ -12,8 +12,8 @@ public class EntityRegistry {
 
     static {
         //Task Entity
-        registry.put(Task.class, new EntityMetadata(Task.class, null, List.of(
-                ColumnInfo.builder().columnName("id").attributeName("id").attributeType(UUID.class).build(),
+        registry.put(Task.class, new EntityMetadata(Task.class, "tbl_task", List.of(
+                ColumnInfo.builder().columnName("id").attributeName("id").attributeType(UUID.class).isPkColumn(true).build(),
                 ColumnInfo.builder().columnName("name").attributeName("name").build(),
                 ColumnInfo.builder().columnName("done").attributeName("completed").attributeType(Boolean.class).build(),
                 ColumnInfo.builder().columnName("task_created").attributeName("dateCreated").attributeType(LocalDate.class).build(),

@@ -26,7 +26,7 @@ public class SetupTable {
         };
         try (Connection conn = DriverManager.getConnection(connectionString);
              Statement stmt = conn.createStatement()) {
-            for(String sql : queries) {
+            for (String sql : queries) {
                 stmt.execute(sql);
             }
         } catch (SQLException e) {

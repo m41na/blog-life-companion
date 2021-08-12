@@ -17,17 +17,17 @@ public abstract class EntityMetadata {
 
     public abstract <T extends Entity> T entityInstance();
 
-    public String resolveAttributeName(String columnName){
-        if(columns.containsKey(columnName)){
+    public String resolveAttributeName(String columnName) {
+        if (columns.containsKey(columnName)) {
             return columns.get(columnName).attributeName;
         }
         throw new EntityMappingException(String.format("column %s has no associated mapping in the metadata", columnName));
     }
 
-    public Class<?> resolveAttributeType(String attributeName){
+    public Class<?> resolveAttributeType(String attributeName) {
         Optional<ColumnInfo> optional = columns.values().stream().filter(info -> info.attributeName.equals(attributeName))
                 .findFirst();
-        if(optional.isPresent()) {
+        if (optional.isPresent()) {
             return optional.get().attributeType;
         }
         throw new EntityMappingException(String.format("attribute %s not found in the metadata", attributeName));
