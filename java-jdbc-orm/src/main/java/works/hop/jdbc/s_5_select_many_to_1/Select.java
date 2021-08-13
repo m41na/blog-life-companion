@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_5_select_1_to_many;
+package works.hop.jdbc.s_5_select_many_to_1;
 
 import works.hop.jdbc.s_0_select.SelectResult;
 
@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public class Select {
 
-    private static final String connectionString = "jdbc:h2:./data/sample-4.db";
+    private static final String connectionString = "jdbc:h2:./data/sample-5.db";
 
     public static void main(String[] args) {
 //        SelectResult<Task> tasks = select("select * from tbl_task", new Object[]{}, EntityRegistry.registry.get(Task.class));
@@ -132,7 +132,6 @@ public class Select {
                     }
                 } else {
                     //must be a composite fk column
-                    System.out.println("Skipping composite fk column for now");
                     String[][] compositeColumns = fkColumnInfo.compositeColumns;
                     String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
                     Object[] params = new Object[compositeColumns.length];
@@ -148,6 +147,36 @@ public class Select {
             }
         }
 
+        //check for Collection columns
+        if (metadata.containsCollectionColumns()) {
+            for (ColumnInfo fkColumnInfo : metadata.collectionColumns()) {
+                String attributeName = fkColumnInfo.attributeName;
+                EntityMetadata joinedEntityMetadata = EntityRegistry.registry.get(fkColumnInfo.attributeType);
+                if (fkColumnInfo.columnName != null) {
+                    String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName);
+                    Object joinValue = rs.getObject(fkColumnInfo.columnName, joinedEntityMetadata.pkColumn().attributeType);
+                    if (joinValue != null) {
+                        SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+                        if (fkEntityValue.result != null) {
+                            data.set(attributeName, fkEntityValue.result);
+                        }
+                    }
+                } else {
+                    //must be a composite fk column
+                    String[][] compositeColumns = fkColumnInfo.compositeColumns;
+                    String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
+                    Object[] params = new Object[compositeColumns.length];
+                    for (int i = 0; i < params.length; i++) {
+                        String column = compositeColumns[i][0];
+                        params[i] = rs.getObject(column);
+                    }
+                    SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+                    if (compositeFkEntityValue.result != null) {
+                        data.set(attributeName, compositeFkEntityValue.result);
+                    }
+                }
+            }
+        }
         return data;
     }
 }

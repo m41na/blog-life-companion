@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_5_select_1_to_many;
+package works.hop.jdbc.s_5_select_many_to_1;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -17,7 +17,8 @@ public class EntityRegistry {
                 ColumnInfo.builder().columnName("name").attributeName("name").build(),
                 ColumnInfo.builder().columnName("done").attributeName("completed").attributeType(Boolean.class).build(),
                 ColumnInfo.builder().columnName("task_created").attributeName("dateCreated").attributeType(LocalDate.class).build(),
-                ColumnInfo.builder().columnName("parent_task").attributeName("parentTask").attributeType(Task.class).isFKColumn(true).build()
+                ColumnInfo.builder().columnName("parent_task").attributeName("parentTask").attributeType(Task.class).isFKColumn(true).build(),
+                ColumnInfo.builder().columnName("parent_task").attributeName("dependsOn").attributeType(Task.class).isCollection(true).build()
         )) {
 
             @Override
@@ -44,6 +45,8 @@ public class EntityRegistry {
                 ColumnInfo.builder().columnName("done").attributeName("completed").attributeType(Boolean.class).build(),
                 ColumnInfo.builder().columnName("task_created").attributeName("dateCreated").attributeType(LocalDate.class).build(),
                 ColumnInfo.builder().attributeName("parentTask").attributeType(TaskV2.class).isFKColumn(true)
+                        .compositeColumns(new String[][]{{"parent_task_num", "num"}, {"parent_task_name", "name"}}).build(),
+                ColumnInfo.builder().attributeName("dependsOn").attributeType(TaskV2.class).isCollection(true)
                         .compositeColumns(new String[][]{{"parent_task_num", "num"}, {"parent_task_name", "name"}}).build()
         )) {
 

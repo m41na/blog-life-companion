@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_5_select_1_to_many;
+package works.hop.jdbc.s_5_select_many_to_1;
 
 public class ColumnInfoBuilder {
 
@@ -10,6 +10,7 @@ public class ColumnInfoBuilder {
     private Boolean isEnum = false;
     private Boolean isCompositePk = false;
     private Boolean isFkColumn = false;
+    private Boolean isCollection = false;
     private String[][] compositeColumns = {};
 
     public ColumnInfoBuilder columnName(String columnName) {
@@ -52,12 +53,17 @@ public class ColumnInfoBuilder {
         return this;
     }
 
+    public ColumnInfoBuilder isCollection(Boolean isCollection) {
+        this.isCollection = isCollection;
+        return this;
+    }
+
     public ColumnInfoBuilder compositeColumns(String[][] compositeColumns) {
         this.compositeColumns = compositeColumns;
         return this;
     }
 
     public ColumnInfo build() {
-        return new ColumnInfo(columnName, attributeName, attributeType, isEmbedded, isEnum, isCompositePk, isPkColumn, isFkColumn, compositeColumns);
+        return new ColumnInfo(columnName, attributeName, attributeType, isEmbedded, isEnum, isCompositePk, isPkColumn, isFkColumn, isCollection, compositeColumns);
     }
 }

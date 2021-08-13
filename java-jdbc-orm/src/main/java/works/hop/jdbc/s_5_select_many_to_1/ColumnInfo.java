@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_5_select_1_to_many;
+package works.hop.jdbc.s_5_select_many_to_1;
 
 public class ColumnInfo {
 
@@ -10,10 +10,11 @@ public class ColumnInfo {
     Boolean isCompositePk;
     Boolean isPkColumn;
     Boolean isFkColumn;
+    Boolean isCollection;
     String[][] compositeColumns;
 
-    public ColumnInfo(String columnName, String attributeName, Class<?> attributeType, Boolean isEmbedded,
-                      Boolean isEnum, Boolean isCompositePk, Boolean isPkColumn, Boolean isFkColumn, String[][] compositeColumns) {
+    public ColumnInfo(String columnName, String attributeName, Class<?> attributeType, Boolean isEmbedded, Boolean isEnum,
+                      Boolean isCompositePk, Boolean isPkColumn, Boolean isFkColumn, Boolean isCollection, String[][] compositeColumns) {
         this.columnName = columnName;
         this.attributeName = attributeName;
         this.attributeType = attributeType;
@@ -22,6 +23,7 @@ public class ColumnInfo {
         this.isCompositePk = isCompositePk;
         this.isPkColumn = isPkColumn;
         this.isFkColumn = isFkColumn;
+        this.isCollection = isCollection;
         this.compositeColumns = compositeColumns;
     }
 

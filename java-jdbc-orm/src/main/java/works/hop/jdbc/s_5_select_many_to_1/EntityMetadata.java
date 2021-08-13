@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_5_select_1_to_many;
+package works.hop.jdbc.s_5_select_many_to_1;
 
 import java.util.List;
 import java.util.Optional;
@@ -61,6 +61,14 @@ public abstract class EntityMetadata {
 
     public List<ColumnInfo> fkColumns() {
         return columns.stream().filter(info -> info.isFkColumn).collect(Collectors.toList());
+    }
+
+    public Boolean containsCollectionColumns() {
+        return columns.stream().anyMatch(info -> info.isCollection != null && info.isCollection);
+    }
+
+    public List<ColumnInfo> collectionColumns() {
+        return columns.stream().filter(info -> info.isCollection).collect(Collectors.toList());
     }
 
     public String createJoinQuery(String fkColumnTable, String fkColumnName) {

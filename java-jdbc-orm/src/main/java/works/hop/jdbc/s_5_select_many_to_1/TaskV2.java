@@ -1,6 +1,7 @@
-package works.hop.jdbc.s_5_select_1_to_many;
+package works.hop.jdbc.s_5_select_many_to_1;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.logging.Logger;
 
 public class TaskV2 implements Entity {
@@ -11,6 +12,7 @@ public class TaskV2 implements Entity {
     Boolean completed;
     LocalDate dateCreated;
     TaskV2 parentTask;
+    Collection<TaskV2> dependsOn;
 
     @Override
     public EntityMetadata metadata() {
@@ -31,6 +33,9 @@ public class TaskV2 implements Entity {
                 break;
             case "parentTask":
                 this.parentTask = (TaskV2) value;
+                break;
+            case "dependsOn":
+                this.dependsOn = (Collection<TaskV2>) value;
                 break;
             default:
                 LOG.warning("what the heck are you doing?");

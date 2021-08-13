@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_5_select_1_to_many;
+package works.hop.jdbc.s_5_select_many_to_1;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -7,7 +7,7 @@ import java.sql.Statement;
 
 public class SetupTable {
 
-    private static final String connectionString = "jdbc:h2:./data/sample-4.db";
+    private static final String connectionString = "jdbc:h2:./data/sample-5.db";
 
     public static void createTable() {
         String[] queries = new String[]{
