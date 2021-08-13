@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_4_select_1_to_1;
+package works.hop.jdbc.s_5_select_1_to_many;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

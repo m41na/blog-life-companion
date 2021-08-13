@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_4_select_1_to_1;
+package works.hop.jdbc.s_5_select_1_to_many;
 
 import works.hop.jdbc.s_0_select.SelectResult;
 
