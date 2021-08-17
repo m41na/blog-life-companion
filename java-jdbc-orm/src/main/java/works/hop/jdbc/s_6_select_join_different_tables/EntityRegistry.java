@@ -56,6 +56,39 @@ public class EntityRegistry {
             }
         });
 
+        //TaskV3 Entity
+        registry.put(TaskV3.class, new EntityMetadata(TaskV3.class, "tbl_task_v3", List.of(
+                ColumnInfo.builder().columnName("id").attributeName("id").attributeType(UUID.class).isPkColumn(true).build(),
+                ColumnInfo.builder().columnName("name").attributeName("name").build(),
+                ColumnInfo.builder().columnName("done").attributeName("completed").attributeType(Boolean.class).build(),
+                ColumnInfo.builder().columnName("task_created").attributeName("dateCreated").attributeType(LocalDate.class).build(),
+                ColumnInfo.builder().columnName("parent_task").attributeName("parentTask").attributeType(TaskV3.class).isFKColumn(true).build(),
+                ColumnInfo.builder().columnName("parent_task").attributeName("dependsOn").attributeType(TaskV3.class).isCollection(true).build()
+        )) {
+
+            @Override
+            public Task entityInstance() {
+                return new Task();
+            }
+        });
+
+        //TaskV4 Entity
+        registry.put(TaskV4.class, new EntityMetadata(TaskV4.class, "tbl_task_v4", List.of(
+                ColumnInfo.builder().attributeName("taskId").attributeType(TaskId.class).isCompositePk(true).build(),
+                ColumnInfo.builder().columnName("done").attributeName("completed").attributeType(Boolean.class).build(),
+                ColumnInfo.builder().columnName("task_created").attributeName("dateCreated").attributeType(LocalDate.class).build(),
+                ColumnInfo.builder().attributeName("parentTask").attributeType(TaskV4.class).isFKColumn(true)
+                        .compositeColumns(new String[][]{{"parent_task_num", "num"}, {"parent_task_name", "name"}}).build(),
+                ColumnInfo.builder().attributeName("dependsOn").attributeType(TaskV4.class).isCollection(true)
+                        .compositeColumns(new String[][]{{"parent_task_num", "num"}, {"parent_task_name", "name"}}).build()
+        )) {
+
+            @Override
+            public TaskV4 entityInstance() {
+                return new TaskV4();
+            }
+        });
+
         //Address Entity
         registry.put(Address.class, new EntityMetadata(Address.class, null, List.of(
                 ColumnInfo.builder().columnName("addr_city").attributeName("city").build(),
@@ -114,6 +147,43 @@ public class EntityRegistry {
             @Override
             public UserV2 entityInstance() {
                 return new UserV2();
+            }
+        });
+
+        //UserV3 Entity
+        registry.put(UserV3.class, new EntityMetadata(UserV3.class, "tbl_user_v3", List.of(
+                ColumnInfo.builder().columnName("id").attributeName("id").attributeType(UUID.class).isPkColumn(true).build(),
+                ColumnInfo.builder().columnName("email_address").attributeName("emailAddress").build(),
+                ColumnInfo.builder().columnName("nickname").attributeName("nickName").build(),
+                ColumnInfo.builder().columnName("access_level").attributeName("accessLevel").attributeType(AccessLevel.class).isEnum(true).build(),
+                ColumnInfo.builder().attributeName("address").attributeType(Address.class).isEmbedded(true).build(),
+                ColumnInfo.builder().columnName("date_joined").attributeName("dateJoined").attributeType(LocalDate.class).build(),
+                ColumnInfo.builder().attributeName("assignments").attributeType(TaskV3.class).isCollection(true)
+                        .joinTable(JoinTable.builder().tableName("tbl_user_task").inverseColumn("id").onColumn("task_id").whereColumn("task_assignee").build()).build()
+        )) {
+
+            @Override
+            public UserV3 entityInstance() {
+                return new UserV3();
+            }
+        });
+
+        //UserV4 Entity
+        registry.put(UserV4.class, new EntityMetadata(UserV4.class, "tbl_user_v4", List.of(
+                ColumnInfo.builder().attributeName("userId").attributeType(UserId.class).isCompositePk(true).build(),
+                ColumnInfo.builder().columnName("nickname").attributeName("nickName").build(),
+                ColumnInfo.builder().columnName("access_level").attributeName("accessLevel").attributeType(AccessLevel.class).isEnum(true).build(),
+                ColumnInfo.builder().attributeName("address").attributeType(Address.class).isEmbedded(true).build(),
+                ColumnInfo.builder().columnName("date_joined").attributeName("dateJoined").attributeType(LocalDate.class).build(),
+                ColumnInfo.builder().attributeName("assignments").attributeType(TaskV4.class).isCollection(true)
+                        .joinTable(JoinTable.builder().tableName("tbl_user_task_v4").compositeColumns("email_address", "username").inverseColumns("num", "name")
+                                .onColumns("task_num", "task_name").whereColumns("task_assignee_email", "task_assignee_uname")
+                                .build()).build()
+        )) {
+
+            @Override
+            public UserV4 entityInstance() {
+                return new UserV4();
             }
         });
     }

@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_6_select_join_different_tables;
+package works.hop.jdbc.s_7_select_refactoring;
 
 import java.util.Objects;
 import java.util.logging.Logger;

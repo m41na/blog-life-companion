@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_6_select_join_different_tables;
+package works.hop.jdbc.s_7_select_refactoring;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,31 +11,23 @@ import java.util.Optional;
 
 public class Select {
 
-    private static final String connectionString = "jdbc:h2:./data/sample-6.db";
+    private static final String connectionString = "jdbc:h2:./data/sample-7.db";
     private static final Logger logger = LogManager.getLogger(Select.class);
 
     public static void main(String[] args) {
-        SelectResult<Task> tasks = select("select * from tbl_task", new Object[]{}, EntityRegistry.registry.get(Task.class));
-//        SelectResult<TaskV2> tasks = select("select * from tbl_task_v2", new Object[]{}, EntityRegistry.registry.get(TaskV2.class));
+        SelectResult<TaskV4> tasks = select("select * from tbl_task_v4", new Object[]{}, EntityRegistry.registry.get(TaskV4.class));
         if (tasks.error != null) {
             System.out.println(tasks.error);
         } else {
-            for (Task entity : tasks.result) {
-//            for (TaskV2 entity : tasks.result) {
+            for (TaskV4 entity : tasks.result) {
                 System.out.println(entity);
             }
         }
 
-//        SelectResult<User> users = select("select * from tbl_user", new Object[]{}, EntityRegistry.registry.get(User.class));
-//        SelectResult<UserV2> users = select("select * from tbl_user_v2", new Object[]{}, EntityRegistry.registry.get(UserV2.class));
-//        SelectResult<UserV3> users = select("select * from tbl_user_v3", new Object[]{}, EntityRegistry.registry.get(UserV3.class));
         SelectResult<UserV4> users = select("select * from tbl_user_v4", new Object[]{}, EntityRegistry.registry.get(UserV4.class));
         if (users.error != null) {
             System.out.println(users.error);
         } else {
-//            for (User entity : users.result) {
-//            for (UserV2 entity : users.result) {
-//            for (UserV3 entity : users.result) {
             for (UserV4 entity : users.result) {
                 System.out.println(entity);
             }
