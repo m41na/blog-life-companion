@@ -75,14 +75,14 @@ public class Select {
         return collection;
     }
 
-    private static <T extends Entity> T extractEntity(ResultSet rs, ResultSetMetaData meta, EntityMetadata metadata, Connection conn, LocalCache<T> cache) throws SQLException {
+    private static <T extends Entity> T extractEntity(ResultSet rs, ResultSetMetaData rsmeta, EntityMetadata metadata, Connection conn, LocalCache<T> cache) throws SQLException {
         T data = metadata.entityInstance();
-        int numberOfColumns = meta.getColumnCount();
+
         //check composite primary key columns
         if (metadata.containsCompositePk()) {
             ColumnInfo compositePkColumnInfo = metadata.compositePkColumn();
             EntityMetadata compositePkEntityMetadata = EntityRegistry.registry.get(compositePkColumnInfo.attributeType);
-            Object compositeId = extractEntity(rs, meta, compositePkEntityMetadata, conn, cache);
+            Object compositeId = extractEntity(rs, rsmeta, compositePkEntityMetadata, conn, cache);
             Optional<T> cached = cache.getIfExists(compositeId);
             if (cached.isPresent()) {
                 return cached.get();
@@ -106,28 +106,12 @@ public class Select {
             }
         }
 
-        //check mapped columns
-        for (int i = 1; i <= numberOfColumns; i++) {
-            String columnName = meta.getColumnName(i).toLowerCase(); //important since the name might be in upper case
-            Optional<ColumnInfo> columnInfoOption = metadata.resolveByColumnName(columnName);
-            if (columnInfoOption.isPresent()) {
-                ColumnInfo columnInfo = columnInfoOption.get();
-                if (!columnInfo.isFkColumn) {
-                    String attributeName = columnInfo.attributeName;
-                    Class<?> attributeType = columnInfo.isEnum ? String.class : columnInfo.attributeType;
-                    data.set(attributeName, rs.getObject(i, attributeType));
-                }
-            }
-        }
+        //check mapped columns - columns that exist in rs
+        extractMappedEntityColumns(rs, rsmeta, metadata, data);
 
         //check embedded columns
         if (metadata.containsEmbedded()) {
-            for (ColumnInfo embeddedColumnInfo : metadata.embeddedColumns()) {
-                String attributeName = embeddedColumnInfo.attributeName;
-                EntityMetadata embeddedEntityMetadata = EntityRegistry.registry.get(embeddedColumnInfo.attributeType);
-                Object embeddedValue = extractEntity(rs, meta, embeddedEntityMetadata, conn, cache);
-                data.set(attributeName, embeddedValue);
-            }
+            extractEmbeddedEntityColumns(rs, rsmeta, metadata, conn, cache, data);
         }
 
         //check for foreign key columns (with join having either single fk column or composite fk column)
@@ -136,53 +120,17 @@ public class Select {
                 String attributeName = fkColumnInfo.attributeName;
                 EntityMetadata joinedEntityMetadata = EntityRegistry.registry.get(fkColumnInfo.attributeType);
                 if (fkColumnInfo.columnName != null) {
-                    if(fkColumnInfo.inverseFkColumn != null){
-                        String query = joinedEntityMetadata.createInverseJoinQuery(fkColumnInfo.inverseFkColumn, fkColumnInfo.columnName);
-                        Object joinValue = rs.getObject(fkColumnInfo.inverseFkColumn, joinedEntityMetadata.pkColumn().attributeType);
-                        if (joinValue != null) {
-                            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
-                            if (fkEntityValue.result != null && fkEntityValue.result.size() > 0) {
-                                data.set(attributeName, new ArrayList<>(fkEntityValue.result).get(0));
-                            }
-                        }
-                    }
-                    else {
-                        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName);
-                        Object joinValue = rs.getObject(fkColumnInfo.columnName, joinedEntityMetadata.pkColumn().attributeType);
-                        if (joinValue != null) {
-                            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
-                            if (fkEntityValue.result != null && fkEntityValue.result.size() > 0) {
-                                data.set(attributeName, new ArrayList<>(fkEntityValue.result).get(0));
-                            }
-                        }
+                    if (fkColumnInfo.inverseFkColumn != null) {
+                        extractFkColumnWhenIsInverse(rs, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                    } else {
+                        extractFkColumnWhenIsNotInverse(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 } else {
-                    //must be a composite fk column
-                    if(fkColumnInfo.isInverseComposite){
-                        String[][] compositeColumns = fkColumnInfo.compositeColumns;
-                        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns);
-                        Object[] params = new Object[compositeColumns.length];
-                        for (int i = 0; i < params.length; i++) {
-                            String column = compositeColumns[i][1];
-                            params[i] = rs.getObject(column);
-                        }
-                        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
-                        if (compositeFkEntityValue.result != null && compositeFkEntityValue.result.size() > 0) {
-                            data.set(attributeName, new ArrayList<>(compositeFkEntityValue.result).get(0));
-                        }
-                    }
-                    else {
-                        String[][] compositeColumns = fkColumnInfo.compositeColumns;
-                        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
-                        Object[] params = new Object[compositeColumns.length];
-                        for (int i = 0; i < params.length; i++) {
-                            String column = compositeColumns[i][0];
-                            params[i] = rs.getObject(column);
-                        }
-                        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
-                        if (compositeFkEntityValue.result != null && compositeFkEntityValue.result.size() > 0) {
-                            data.set(attributeName, new ArrayList<>(compositeFkEntityValue.result).get(0));
-                        }
+                    //must be a composite fk column since 'columnName' is null
+                    if (fkColumnInfo.isInverseComposite) {
+                        extractCompositeFkWhenIsInverse(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                    } else {
+                        extractCompositeFkWhenIsNotInverse(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 }
             }
@@ -193,83 +141,177 @@ public class Select {
             for (ColumnInfo fkColumnInfo : metadata.collectionColumns()) {
                 String attributeName = fkColumnInfo.attributeName;
                 EntityMetadata joinedEntityMetadata = EntityRegistry.registry.get(fkColumnInfo.attributeType);
-                if(fkColumnInfo.joinTable != null){
+                if (fkColumnInfo.joinTable != null) {
                     JoinTable joinTable = fkColumnInfo.joinTable;
-                    if(joinTable.compositeColumns != null) {
-                        String query = joinedEntityMetadata.createJoinTableCompositeJoinQuery(joinTable);
-                        Object[] params = new Object[joinTable.compositeColumns.length];
-                        for (int i = 0; i < params.length; i++) {
-                            String column = joinTable.compositeColumns[i];
-                            params[i] = rs.getObject(column);
-                        }
-                        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
-                        if (compositeFkEntityValue.result != null) {
-                            data.set(attributeName, compositeFkEntityValue.result);
-                        }
+                    if (joinTable.compositeColumns != null) {
+                        extractCollectionUsingJoinTableHavingCompositeFkColumn(rs, conn, cache, data, attributeName, joinedEntityMetadata, joinTable);
+                    } else {
+                        extractCollectionUsingJoinTableHavingFkColumn(rs, conn, cache, data, attributeName, joinedEntityMetadata, joinTable);
                     }
-                    else{
-                        String query = joinedEntityMetadata.createJoinTableJoinQuery(joinTable);
-                        Object joinValue = rs.getObject(joinTable.inverseColumns[0], joinedEntityMetadata.pkColumn().attributeType);
-                        if (joinValue != null) {
-                            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
-                            if (fkEntityValue.result != null) {
-                                data.set(attributeName, fkEntityValue.result);
-                            }
-                        }
-                    }
-                }
-                else if (fkColumnInfo.columnName != null) {
-                    if(fkColumnInfo.inverseFkColumn != null){
-                        String query = joinedEntityMetadata.createInverseJoinQuery(metadata.tableName, fkColumnInfo.columnName);
-                        Object joinValue = rs.getObject(fkColumnInfo.inverseFkColumn, joinedEntityMetadata.pkColumn().attributeType);
-                        if (joinValue != null) {
-                            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
-                            if (fkEntityValue.result != null) {
-                                data.set(attributeName, fkEntityValue.result);
-                            }
-                        }
-                    }
-                    else {
-                        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName);
-                        Object joinValue = rs.getObject(fkColumnInfo.columnName, joinedEntityMetadata.pkColumn().attributeType);
-                        if (joinValue != null) {
-                            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
-                            if (fkEntityValue.result != null) {
-                                data.set(attributeName, fkEntityValue.result);
-                            }
-                        }
+                } else if (fkColumnInfo.columnName != null) {
+                    if (fkColumnInfo.inverseFkColumn != null) {
+                        extractCollectionHavingInverseFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                    } else {
+                        extractCollectionHavingFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 } else {
                     //must be a composite fk column
-                    if(fkColumnInfo.isInverseComposite){
-                        String[][] compositeColumns = fkColumnInfo.compositeColumns;
-                        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns);
-                        Object[] params = new Object[compositeColumns.length];
-                        for (int i = 0; i < params.length; i++) {
-                            String column = compositeColumns[i][1];
-                            params[i] = rs.getObject(column);
-                        }
-                        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
-                        if (compositeFkEntityValue.result != null) {
-                            data.set(attributeName, compositeFkEntityValue.result);
-                        }
-                    }
-                    else {
-                        String[][] compositeColumns = fkColumnInfo.compositeColumns;
-                        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
-                        Object[] params = new Object[compositeColumns.length];
-                        for (int i = 0; i < params.length; i++) {
-                            String column = compositeColumns[i][0];
-                            params[i] = rs.getObject(column);
-                        }
-                        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
-                        if (compositeFkEntityValue.result != null) {
-                            data.set(attributeName, compositeFkEntityValue.result);
-                        }
+                    if (fkColumnInfo.isInverseComposite) {
+                        extractCollectionHavingInverseCompositeFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                    } else {
+                        extractCollectionHavingCompositeFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 }
             }
         }
         return data;
+    }
+
+    private static <T extends Entity> void extractCollectionHavingFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName);
+        Object joinValue = rs.getObject(fkColumnInfo.columnName, joinedEntityMetadata.pkColumn().attributeType);
+        if (joinValue != null) {
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            if (fkEntityValue.result != null) {
+                data.set(attributeName, fkEntityValue.result);
+            }
+        }
+    }
+
+    private static <T extends Entity> void extractCollectionHavingInverseFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createInverseJoinQuery(metadata.tableName, fkColumnInfo.columnName);
+        Object joinValue = rs.getObject(fkColumnInfo.inverseFkColumn, joinedEntityMetadata.pkColumn().attributeType);
+        if (joinValue != null) {
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            if (fkEntityValue.result != null) {
+                data.set(attributeName, fkEntityValue.result);
+            }
+        }
+    }
+
+    private static <T extends Entity> void extractCollectionHavingCompositeFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String[][] compositeColumns = fkColumnInfo.compositeColumns;
+        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
+        Object[] params = new Object[compositeColumns.length];
+        for (int i = 0; i < params.length; i++) {
+            String column = compositeColumns[i][0];
+            params[i] = rs.getObject(column);
+        }
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        if (compositeFkEntityValue.result != null) {
+            data.set(attributeName, compositeFkEntityValue.result);
+        }
+    }
+
+    private static <T extends Entity> void extractCollectionHavingInverseCompositeFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String[][] compositeColumns = fkColumnInfo.compositeColumns;
+        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns);
+        Object[] params = new Object[compositeColumns.length];
+        for (int i = 0; i < params.length; i++) {
+            String column = compositeColumns[i][1];
+            params[i] = rs.getObject(column);
+        }
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        if (compositeFkEntityValue.result != null) {
+            data.set(attributeName, compositeFkEntityValue.result);
+        }
+    }
+
+    private static <T extends Entity> void extractCollectionUsingJoinTableHavingFkColumn(ResultSet rs, Connection conn, LocalCache<T> cache, T data, String attributeName, EntityMetadata joinedEntityMetadata, JoinTable joinTable) throws SQLException {
+        String query = joinedEntityMetadata.createJoinTableJoinQuery(joinTable);
+        Object joinValue = rs.getObject(joinTable.inverseColumns[0], joinedEntityMetadata.pkColumn().attributeType);
+        if (joinValue != null) {
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            if (fkEntityValue.result != null) {
+                data.set(attributeName, fkEntityValue.result);
+            }
+        }
+    }
+
+    private static <T extends Entity> void extractCollectionUsingJoinTableHavingCompositeFkColumn(ResultSet rs, Connection conn, LocalCache<T> cache, T data, String attributeName, EntityMetadata joinedEntityMetadata, JoinTable joinTable) throws SQLException {
+        String query = joinedEntityMetadata.createJoinTableCompositeJoinQuery(joinTable);
+        Object[] params = new Object[joinTable.compositeColumns.length];
+        for (int i = 0; i < params.length; i++) {
+            String column = joinTable.compositeColumns[i];
+            params[i] = rs.getObject(column);
+        }
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        if (compositeFkEntityValue.result != null) {
+            data.set(attributeName, compositeFkEntityValue.result);
+        }
+    }
+
+    private static <T extends Entity> void extractFkColumnWhenIsNotInverse(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName);
+        Object joinValue = rs.getObject(fkColumnInfo.columnName, joinedEntityMetadata.pkColumn().attributeType);
+        if (joinValue != null) {
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            if (fkEntityValue.result != null && fkEntityValue.result.size() > 0) {
+                data.set(attributeName, new ArrayList<>(fkEntityValue.result).get(0));
+            }
+        }
+    }
+
+    private static <T extends Entity> void extractFkColumnWhenIsInverse(ResultSet rs, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createInverseJoinQuery(fkColumnInfo.inverseFkColumn, fkColumnInfo.columnName);
+        Object joinValue = rs.getObject(fkColumnInfo.inverseFkColumn, joinedEntityMetadata.pkColumn().attributeType);
+        if (joinValue != null) {
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            if (fkEntityValue.result != null && fkEntityValue.result.size() > 0) {
+                data.set(attributeName, new ArrayList<>(fkEntityValue.result).get(0));
+            }
+        }
+    }
+
+    private static <T extends Entity> void extractEmbeddedEntityColumns(ResultSet rs, ResultSetMetaData rsmeta, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data) throws SQLException {
+        for (ColumnInfo embeddedColumnInfo : metadata.embeddedColumns()) {
+            String attributeName = embeddedColumnInfo.attributeName;
+            EntityMetadata embeddedEntityMetadata = EntityRegistry.registry.get(embeddedColumnInfo.attributeType);
+            Object embeddedValue = extractEntity(rs, rsmeta, embeddedEntityMetadata, conn, cache);
+            data.set(attributeName, embeddedValue);
+        }
+    }
+
+    private static <T extends Entity> void extractMappedEntityColumns(ResultSet rs, ResultSetMetaData rsmeta, EntityMetadata metadata, T data) throws SQLException {
+        for (int i = 1; i <= rsmeta.getColumnCount(); i++) {
+            String columnName = rsmeta.getColumnName(i).toLowerCase(); //important since the name might be in upper case
+            Optional<ColumnInfo> columnInfoOption = metadata.resolveByColumnName(columnName);
+            if (columnInfoOption.isPresent()) {
+                ColumnInfo columnInfo = columnInfoOption.get();
+                if (!columnInfo.isFkColumn) {
+                    String attributeName = columnInfo.attributeName;
+                    Class<?> attributeType = columnInfo.isEnum ? String.class : columnInfo.attributeType;
+                    data.set(attributeName, rs.getObject(i, attributeType));
+                }
+            }
+        }
+    }
+
+    private static <T extends Entity> void extractCompositeFkWhenIsNotInverse(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String[][] compositeColumns = fkColumnInfo.compositeColumns;
+        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
+        Object[] params = new Object[compositeColumns.length];
+        for (int i = 0; i < params.length; i++) {
+            String column = compositeColumns[i][0];
+            params[i] = rs.getObject(column);
+        }
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        if (compositeFkEntityValue.result != null && compositeFkEntityValue.result.size() > 0) {
+            data.set(attributeName, new ArrayList<>(compositeFkEntityValue.result).get(0));
+        }
+    }
+
+    private static <T extends Entity> void extractCompositeFkWhenIsInverse(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String[][] compositeColumns = fkColumnInfo.compositeColumns;
+        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns);
+        Object[] params = new Object[compositeColumns.length];
+        for (int i = 0; i < params.length; i++) {
+            String column = compositeColumns[i][1];
+            params[i] = rs.getObject(column);
+        }
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        if (compositeFkEntityValue.result != null && compositeFkEntityValue.result.size() > 0) {
+            data.set(attributeName, new ArrayList<>(compositeFkEntityValue.result).get(0));
+        }
     }
 }
