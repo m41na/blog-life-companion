@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_7_select_refactoring;
+package works.hop.jdbc.s_8_validate_metadata;
 
 public class ColumnInfo {
 

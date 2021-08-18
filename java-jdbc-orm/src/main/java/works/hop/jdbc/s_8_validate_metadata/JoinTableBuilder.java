@@ -1,4 +1,4 @@
-package works.hop.jdbc.s_6_select_join_different_tables;
+package works.hop.jdbc.s_8_validate_metadata;
 
 public class JoinTableBuilder {
 
@@ -7,6 +7,7 @@ public class JoinTableBuilder {
     private String[] whereColumns = {};
     private String[] inverseColumns = {};
     private String[] compositeColumns = {};
+    private String[] limitColumns = {};
 
     public JoinTableBuilder tableName(String tableName) {
         this.tableName = tableName;
@@ -57,7 +58,12 @@ public class JoinTableBuilder {
         return this;
     }
 
+    public JoinTableBuilder limitColumns(String... limitColumns) {
+        this.limitColumns = limitColumns;
+        return this;
+    }
+
     public JoinTable build() {
-        return new JoinTable(tableName, compositeColumns, inverseColumns, onColumns, whereColumns);
+        return new JoinTable(tableName, compositeColumns, inverseColumns, onColumns, whereColumns, limitColumns);
     }
 }

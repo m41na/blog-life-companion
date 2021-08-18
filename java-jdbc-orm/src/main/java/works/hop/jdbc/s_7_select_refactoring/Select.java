@@ -15,16 +15,17 @@ public class Select {
     private static final Logger logger = LogManager.getLogger(Select.class);
 
     public static void main(String[] args) {
-        SelectResult<TaskV4> tasks = select("select * from tbl_task_v4", new Object[]{}, EntityRegistry.registry.get(TaskV4.class));
-        if (tasks.error != null) {
-            System.out.println(tasks.error);
-        } else {
-            for (TaskV4 entity : tasks.result) {
-                System.out.println(entity);
-            }
-        }
+//        SelectResult<TaskV4> tasks = select("select * from tbl_task_v4", new Object[]{}, EntityRegistry.registry.get(TaskV4.class));
+//        if (tasks.error != null) {
+//            System.out.println(tasks.error);
+//        } else {
+//            for (TaskV4 entity : tasks.result) {
+//                System.out.println(entity);
+//            }
+//        }
 
-        SelectResult<UserV4> users = select("select * from tbl_user_v4", new Object[]{}, EntityRegistry.registry.get(UserV4.class));
+        OffsetLimits limits = OffsetLimits.builder().offsetLimit(0, 3, "num", "name").build();
+        SelectResult<UserV4> users = select("select * from tbl_user_v4", new Object[]{}, EntityRegistry.registry.get(UserV4.class), limits);
         if (users.error != null) {
             System.out.println(users.error);
         } else {
@@ -35,9 +36,13 @@ public class Select {
     }
 
     public static <T extends Entity> SelectResult<T> select(String query, Object[] parameters, EntityMetadata metadata) {
+        return select(query, parameters, metadata, OffsetLimits.builder().build());
+    }
+
+    public static <T extends Entity> SelectResult<T> select(String query, Object[] parameters, EntityMetadata metadata, OffsetLimits limits) {
         try (Connection conn = DriverManager.getConnection(connectionString)) {
             LocalCache<T> cache = new LocalCache<>();
-            SelectResult<T> result = select(query, parameters, metadata, conn, cache);
+            SelectResult<T> result = select(query, parameters, metadata, limits, conn, cache);
             cache.clear();
             return result;
         } catch (Exception e) {
@@ -46,14 +51,14 @@ public class Select {
         }
     }
 
-    private static <T extends Entity> SelectResult<T> select(String query, Object[] parameters, EntityMetadata metadata, Connection conn, LocalCache<T> cache) {
+    private static <T extends Entity> SelectResult<T> select(String query, Object[] parameters, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache) {
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             for (int i = 0; i < parameters.length; i++) {
                 ps.setObject(i + 1, parameters[i]);
             }
 
             try (ResultSet rs = ps.executeQuery()) {
-                Collection<T> collection = extractEntities(rs, metadata, conn, cache);
+                Collection<T> collection = extractEntities(rs, metadata, limits, conn, cache);
                 return SelectResult.success(collection);
             } catch (Exception e) {
                 logger.error("select error", e);
@@ -65,24 +70,24 @@ public class Select {
         }
     }
 
-    private static <T extends Entity> Collection<T> extractEntities(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache) throws SQLException {
+    private static <T extends Entity> Collection<T> extractEntities(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache) throws SQLException {
         Collection<T> collection = new ArrayList<>();
         ResultSetMetaData meta = rs.getMetaData();
         while (rs.next()) {
-            T data = extractEntity(rs, meta, metadata, conn, cache);
+            T data = extractEntity(rs, meta, metadata, limits, conn, cache);
             collection.add(data);
         }
         return collection;
     }
 
-    private static <T extends Entity> T extractEntity(ResultSet rs, ResultSetMetaData rsmeta, EntityMetadata metadata, Connection conn, LocalCache<T> cache) throws SQLException {
+    private static <T extends Entity> T extractEntity(ResultSet rs, ResultSetMetaData rsmeta, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache) throws SQLException {
         T data = metadata.entityInstance();
 
         //check composite primary key columns
         if (metadata.containsCompositePk()) {
             ColumnInfo compositePkColumnInfo = metadata.compositePkColumn();
             EntityMetadata compositePkEntityMetadata = EntityRegistry.registry.get(compositePkColumnInfo.attributeType);
-            Object compositeId = extractEntity(rs, rsmeta, compositePkEntityMetadata, conn, cache);
+            Object compositeId = extractEntity(rs, rsmeta, compositePkEntityMetadata, limits, conn, cache);
             Optional<T> cached = cache.getIfExists(compositeId);
             if (cached.isPresent()) {
                 return cached.get();
@@ -111,7 +116,7 @@ public class Select {
 
         //check embedded columns
         if (metadata.containsEmbedded()) {
-            extractEmbeddedEntityColumns(rs, rsmeta, metadata, conn, cache, data);
+            extractEmbeddedEntityColumns(rs, rsmeta, metadata, limits, conn, cache, data);
         }
 
         //check for foreign key columns (with join having either single fk column or composite fk column)
@@ -121,16 +126,16 @@ public class Select {
                 EntityMetadata joinedEntityMetadata = EntityRegistry.registry.get(fkColumnInfo.attributeType);
                 if (fkColumnInfo.columnName != null) {
                     if (fkColumnInfo.inverseFkColumn != null) {
-                        extractFkColumnWhenIsInverse(rs, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractFkColumnWhenIsInverse(rs, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     } else {
-                        extractFkColumnWhenIsNotInverse(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractFkColumnWhenIsNotInverse(rs, metadata, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 } else {
                     //must be a composite fk column since 'columnName' is null
                     if (fkColumnInfo.isInverseComposite) {
-                        extractCompositeFkWhenIsInverse(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractCompositeFkWhenIsInverse(rs, metadata, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     } else {
-                        extractCompositeFkWhenIsNotInverse(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractCompositeFkWhenIsNotInverse(rs, metadata, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 }
             }
@@ -144,22 +149,22 @@ public class Select {
                 if (fkColumnInfo.joinTable != null) {
                     JoinTable joinTable = fkColumnInfo.joinTable;
                     if (joinTable.compositeColumns != null) {
-                        extractCollectionUsingJoinTableHavingCompositeFkColumn(rs, conn, cache, data, attributeName, joinedEntityMetadata, joinTable);
+                        extractCollectionUsingJoinTableHavingCompositeFkColumn(rs, limits, conn, cache, data, attributeName, joinedEntityMetadata, joinTable);
                     } else {
-                        extractCollectionUsingJoinTableHavingFkColumn(rs, conn, cache, data, attributeName, joinedEntityMetadata, joinTable);
+                        extractCollectionUsingJoinTableHavingFkColumn(rs, limits, conn, cache, data, attributeName, joinedEntityMetadata, joinTable);
                     }
                 } else if (fkColumnInfo.columnName != null) {
                     if (fkColumnInfo.inverseFkColumn != null) {
-                        extractCollectionHavingInverseFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractCollectionHavingInverseFkColumn(rs, metadata, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     } else {
-                        extractCollectionHavingFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractCollectionHavingFkColumn(rs, metadata, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 } else {
                     //must be a composite fk column
                     if (fkColumnInfo.isInverseComposite) {
-                        extractCollectionHavingInverseCompositeFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractCollectionHavingInverseCompositeFkColumn(rs, metadata, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     } else {
-                        extractCollectionHavingCompositeFkColumn(rs, metadata, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
+                        extractCollectionHavingCompositeFkColumn(rs, metadata, limits, conn, cache, data, fkColumnInfo, attributeName, joinedEntityMetadata);
                     }
                 }
             }
@@ -167,107 +172,107 @@ public class Select {
         return data;
     }
 
-    private static <T extends Entity> void extractCollectionHavingFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
-        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName);
+    private static <T extends Entity> void extractCollectionHavingFkColumn(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName, limits, fkColumnInfo.limitColumns);
         Object joinValue = rs.getObject(fkColumnInfo.columnName, joinedEntityMetadata.pkColumn().attributeType);
         if (joinValue != null) {
-            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, limits, conn, cache);
             if (fkEntityValue.result != null) {
                 data.set(attributeName, fkEntityValue.result);
             }
         }
     }
 
-    private static <T extends Entity> void extractCollectionHavingInverseFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
-        String query = joinedEntityMetadata.createInverseJoinQuery(metadata.tableName, fkColumnInfo.columnName);
+    private static <T extends Entity> void extractCollectionHavingInverseFkColumn(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createInverseJoinQuery(metadata.tableName, fkColumnInfo.columnName, limits);
         Object joinValue = rs.getObject(fkColumnInfo.inverseFkColumn, joinedEntityMetadata.pkColumn().attributeType);
         if (joinValue != null) {
-            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, limits, conn, cache);
             if (fkEntityValue.result != null) {
                 data.set(attributeName, fkEntityValue.result);
             }
         }
     }
 
-    private static <T extends Entity> void extractCollectionHavingCompositeFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+    private static <T extends Entity> void extractCollectionHavingCompositeFkColumn(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
         String[][] compositeColumns = fkColumnInfo.compositeColumns;
-        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
+        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns, limits, fkColumnInfo.limitColumns);
         Object[] params = new Object[compositeColumns.length];
         for (int i = 0; i < params.length; i++) {
             String column = compositeColumns[i][0];
             params[i] = rs.getObject(column);
         }
-        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, limits, conn, cache);
         if (compositeFkEntityValue.result != null) {
             data.set(attributeName, compositeFkEntityValue.result);
         }
     }
 
-    private static <T extends Entity> void extractCollectionHavingInverseCompositeFkColumn(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+    private static <T extends Entity> void extractCollectionHavingInverseCompositeFkColumn(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
         String[][] compositeColumns = fkColumnInfo.compositeColumns;
-        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns);
+        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns, limits);
         Object[] params = new Object[compositeColumns.length];
         for (int i = 0; i < params.length; i++) {
             String column = compositeColumns[i][1];
             params[i] = rs.getObject(column);
         }
-        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, limits, conn, cache);
         if (compositeFkEntityValue.result != null) {
             data.set(attributeName, compositeFkEntityValue.result);
         }
     }
 
-    private static <T extends Entity> void extractCollectionUsingJoinTableHavingFkColumn(ResultSet rs, Connection conn, LocalCache<T> cache, T data, String attributeName, EntityMetadata joinedEntityMetadata, JoinTable joinTable) throws SQLException {
-        String query = joinedEntityMetadata.createJoinTableJoinQuery(joinTable);
+    private static <T extends Entity> void extractCollectionUsingJoinTableHavingFkColumn(ResultSet rs, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, String attributeName, EntityMetadata joinedEntityMetadata, JoinTable joinTable) throws SQLException {
+        String query = joinedEntityMetadata.createJoinTableJoinQuery(joinTable, limits);
         Object joinValue = rs.getObject(joinTable.inverseColumns[0], joinedEntityMetadata.pkColumn().attributeType);
         if (joinValue != null) {
-            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, limits, conn, cache);
             if (fkEntityValue.result != null) {
                 data.set(attributeName, fkEntityValue.result);
             }
         }
     }
 
-    private static <T extends Entity> void extractCollectionUsingJoinTableHavingCompositeFkColumn(ResultSet rs, Connection conn, LocalCache<T> cache, T data, String attributeName, EntityMetadata joinedEntityMetadata, JoinTable joinTable) throws SQLException {
-        String query = joinedEntityMetadata.createJoinTableCompositeJoinQuery(joinTable);
+    private static <T extends Entity> void extractCollectionUsingJoinTableHavingCompositeFkColumn(ResultSet rs, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, String attributeName, EntityMetadata joinedEntityMetadata, JoinTable joinTable) throws SQLException {
+        String query = joinedEntityMetadata.createJoinTableCompositeJoinQuery(joinTable, limits);
         Object[] params = new Object[joinTable.compositeColumns.length];
         for (int i = 0; i < params.length; i++) {
             String column = joinTable.compositeColumns[i];
             params[i] = rs.getObject(column);
         }
-        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, limits, conn, cache);
         if (compositeFkEntityValue.result != null) {
             data.set(attributeName, compositeFkEntityValue.result);
         }
     }
 
-    private static <T extends Entity> void extractFkColumnWhenIsNotInverse(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
-        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName);
+    private static <T extends Entity> void extractFkColumnWhenIsNotInverse(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createJoinQuery(metadata.tableName, fkColumnInfo.columnName, limits, fkColumnInfo.limitColumns);
         Object joinValue = rs.getObject(fkColumnInfo.columnName, joinedEntityMetadata.pkColumn().attributeType);
         if (joinValue != null) {
-            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, limits, conn, cache);
             if (fkEntityValue.result != null && fkEntityValue.result.size() > 0) {
                 data.set(attributeName, new ArrayList<>(fkEntityValue.result).get(0));
             }
         }
     }
 
-    private static <T extends Entity> void extractFkColumnWhenIsInverse(ResultSet rs, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
-        String query = joinedEntityMetadata.createInverseJoinQuery(fkColumnInfo.inverseFkColumn, fkColumnInfo.columnName);
+    private static <T extends Entity> void extractFkColumnWhenIsInverse(ResultSet rs, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+        String query = joinedEntityMetadata.createInverseJoinQuery(fkColumnInfo.inverseFkColumn, fkColumnInfo.columnName, limits);
         Object joinValue = rs.getObject(fkColumnInfo.inverseFkColumn, joinedEntityMetadata.pkColumn().attributeType);
         if (joinValue != null) {
-            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, conn, cache);
+            SelectResult<?> fkEntityValue = select(query, new Object[]{joinValue}, joinedEntityMetadata, limits, conn, cache);
             if (fkEntityValue.result != null && fkEntityValue.result.size() > 0) {
                 data.set(attributeName, new ArrayList<>(fkEntityValue.result).get(0));
             }
         }
     }
 
-    private static <T extends Entity> void extractEmbeddedEntityColumns(ResultSet rs, ResultSetMetaData rsmeta, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data) throws SQLException {
+    private static <T extends Entity> void extractEmbeddedEntityColumns(ResultSet rs, ResultSetMetaData rsmeta, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data) throws SQLException {
         for (ColumnInfo embeddedColumnInfo : metadata.embeddedColumns()) {
             String attributeName = embeddedColumnInfo.attributeName;
             EntityMetadata embeddedEntityMetadata = EntityRegistry.registry.get(embeddedColumnInfo.attributeType);
-            Object embeddedValue = extractEntity(rs, rsmeta, embeddedEntityMetadata, conn, cache);
+            Object embeddedValue = extractEntity(rs, rsmeta, embeddedEntityMetadata, limits, conn, cache);
             data.set(attributeName, embeddedValue);
         }
     }
@@ -287,29 +292,29 @@ public class Select {
         }
     }
 
-    private static <T extends Entity> void extractCompositeFkWhenIsNotInverse(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+    private static <T extends Entity> void extractCompositeFkWhenIsNotInverse(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
         String[][] compositeColumns = fkColumnInfo.compositeColumns;
-        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns);
+        String query = joinedEntityMetadata.createCompositeJoinQuery(metadata.tableName, compositeColumns, limits, fkColumnInfo.limitColumns);
         Object[] params = new Object[compositeColumns.length];
         for (int i = 0; i < params.length; i++) {
             String column = compositeColumns[i][0];
             params[i] = rs.getObject(column);
         }
-        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, limits, conn, cache);
         if (compositeFkEntityValue.result != null && compositeFkEntityValue.result.size() > 0) {
             data.set(attributeName, new ArrayList<>(compositeFkEntityValue.result).get(0));
         }
     }
 
-    private static <T extends Entity> void extractCompositeFkWhenIsInverse(ResultSet rs, EntityMetadata metadata, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
+    private static <T extends Entity> void extractCompositeFkWhenIsInverse(ResultSet rs, EntityMetadata metadata, OffsetLimits limits, Connection conn, LocalCache<T> cache, T data, ColumnInfo fkColumnInfo, String attributeName, EntityMetadata joinedEntityMetadata) throws SQLException {
         String[][] compositeColumns = fkColumnInfo.compositeColumns;
-        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns);
+        String query = joinedEntityMetadata.createInverseCompositeJoinQuery(metadata.tableName, compositeColumns, limits);
         Object[] params = new Object[compositeColumns.length];
         for (int i = 0; i < params.length; i++) {
             String column = compositeColumns[i][1];
             params[i] = rs.getObject(column);
         }
-        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, conn, cache);
+        SelectResult<?> compositeFkEntityValue = select(query, params, joinedEntityMetadata, limits, conn, cache);
         if (compositeFkEntityValue.result != null && compositeFkEntityValue.result.size() > 0) {
             data.set(attributeName, new ArrayList<>(compositeFkEntityValue.result).get(0));
         }

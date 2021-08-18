@@ -7,13 +7,14 @@ public class JoinTableBuilder {
     private String[] whereColumns = {};
     private String[] inverseColumns = {};
     private String[] compositeColumns = {};
+    private String[] limitColumns = {};
 
-    public JoinTableBuilder tableName(String tableName){
+    public JoinTableBuilder tableName(String tableName) {
         this.tableName = tableName;
         return this;
     }
 
-    public JoinTableBuilder onColumn(String onColumn){
+    public JoinTableBuilder onColumn(String onColumn) {
         String[] newArray = new String[onColumns.length + 1];
         System.arraycopy(this.onColumns, 0, newArray, 0, onColumns.length);
         this.onColumns = newArray;
@@ -21,12 +22,12 @@ public class JoinTableBuilder {
         return this;
     }
 
-    public JoinTableBuilder onColumns(String... onColumns){
+    public JoinTableBuilder onColumns(String... onColumns) {
         this.onColumns = onColumns;
         return this;
     }
 
-    public JoinTableBuilder whereColumn(String whereColumn){
+    public JoinTableBuilder whereColumn(String whereColumn) {
         String[] newArray = new String[whereColumns.length + 1];
         System.arraycopy(this.whereColumns, 0, newArray, 0, whereColumns.length);
         this.whereColumns = newArray;
@@ -34,7 +35,7 @@ public class JoinTableBuilder {
         return this;
     }
 
-    public JoinTableBuilder whereColumns(String... whereColumns){
+    public JoinTableBuilder whereColumns(String... whereColumns) {
         this.whereColumns = whereColumns;
         return this;
     }
@@ -47,7 +48,7 @@ public class JoinTableBuilder {
         return this;
     }
 
-    public JoinTableBuilder inverseColumns(String... inverseColumns){
+    public JoinTableBuilder inverseColumns(String... inverseColumns) {
         this.inverseColumns = inverseColumns;
         return this;
     }
@@ -57,7 +58,12 @@ public class JoinTableBuilder {
         return this;
     }
 
+    public JoinTableBuilder limitColumns(String... limitColumns) {
+        this.limitColumns = limitColumns;
+        return this;
+    }
+
     public JoinTable build() {
-        return new JoinTable(tableName, compositeColumns, inverseColumns, onColumns, whereColumns);
+        return new JoinTable(tableName, compositeColumns, inverseColumns, onColumns, whereColumns, limitColumns);
     }
 }
