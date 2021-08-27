@@ -7,27 +7,36 @@ import java.sql.Statement;
 
 public class SetupTable {
 
-    private static final String connectionString = "jdbc:h2:./data/sample-i_1.db";
+    private static final String connectionString = "jdbc:h2:./data/sample-i_2.db";
 
     public static void createTable() {
-        String sql = "create table if not exists tbl_task (\n" +
-                "  id UUID default random_uuid(),\n" +
-                "  name varchar(50) not null,\n" +
-                "  done boolean not null default false,\n" +
-                "  task_created timestamp not null default now(),\n" +
-                "  constraint task_pk primary key(id),\n" +
-                "  constraint uniq_name unique (name)\n" +
-                ")";
+        String[] queries = new String[]{
+                "drop table if exists tbl_customer;",
+                "create table if not exists tbl_customer (\n" +
+                        "  member_id UUID default random_uuid(),\n" +
+                        "  first_name varchar(50) not null,\n" +
+                        "  last_name varchar(50) not null,\n" +
+                        "  date_joined timestamp not null default now(),\n" +
+                        "  member_level varchar default 'SILVER',\n" +
+                        "  addr_city varchar(50),\n" +
+                        "  addr_state varchar(30),\n" +
+                        "  addr_postal_code varchar(10),\n" +
+                        "  constraint customer_pk primary key(member_id)\n" +
+                        ");"
+        };
         try (Connection conn = DriverManager.getConnection(connectionString);
              Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
+            for (String sql : queries) {
+                stmt.execute(sql);
+            }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public static void initializeData(String name) {
-        String sql = "insert into tbl_task (name) values ('" + name + "')";
+    public static void initializeData(String firstName, String lastNAme, String city, String state, String zipCode) {
+        String sql = "insert into tbl_customer (first_name, last_name, addr_city, addr_state, addr_postal_code) values " +
+                "('" + firstName + "', '" + lastNAme + "', '" + city + "', '" + state + "', '" + zipCode + "')";
         try (Connection conn = DriverManager.getConnection(connectionString);
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
@@ -37,10 +46,9 @@ public class SetupTable {
     }
 
     public static void main(String[] args) {
-//        connect();
-//        createTaskTable();
-        initializeData("Wake up");
-        initializeData("Shower");
-        initializeData("Eat Breakfast");
+        createTable();
+        initializeData("Person", "One", "Chicago", "IL", "60063");
+        initializeData("Person", "Two", "Davenport", "IA", "55430");
+        initializeData("Person", "Three", "Madison", "WI", "53718");
     }
 }
