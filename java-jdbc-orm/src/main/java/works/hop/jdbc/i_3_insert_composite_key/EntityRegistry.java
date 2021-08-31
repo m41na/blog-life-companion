@@ -39,7 +39,7 @@ public class EntityRegistry {
         registry.put(User.class, new EntityMetadata(User.class, "tbl_user", Set.of(
                 ColumnInfo.builder().attributeName("userId").attributeType(UserId.class).isCompositePk(true).build(),
                 ColumnInfo.builder().columnName("nickname").attributeName("nickName").build(),
-                ColumnInfo.builder().columnName("access_level").attributeName("accessLevel").attributeType(AccessLevel.class).isEnum(true).build(),
+                ColumnInfo.builder().columnName("access_level").attributeName("accessLevel").attributeType(AccessLevel.class).isEnum(true).isEnumOrdinal(true).build(),
                 ColumnInfo.builder().attributeName("address").attributeType(Address.class).isEmbedded(true).build(),
                 ColumnInfo.builder().columnName("date_joined").attributeName("dateJoined").attributeType(LocalDate.class).build()
         )) {

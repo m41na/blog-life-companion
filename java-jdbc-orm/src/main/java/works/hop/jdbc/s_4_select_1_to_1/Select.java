@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public class Select {
 
-    private static final String connectionString = "jdbc:h2:./data/sample-4.db";
+    private static final String connectionString = "jdbc:h2:./data/sample-i_4.db";
 
     public static void main(String[] args) {
 //        SelectResult<Task> tasks = select("select * from tbl_task", new Object[]{}, EntityRegistry.registry.get(Task.class));
